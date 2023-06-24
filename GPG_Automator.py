@@ -1,3 +1,4 @@
+import banner
 from helpers import filedialog,saveDirectory
 from colorama import Fore, just_fix_windows_console,init
 from pathlib import Path
@@ -24,14 +25,6 @@ if check_exist.returncode == 0:
     keys = gpg.list_keys()
     keys_userid = [key["uids"][0].split(" ")[0] for key in keys]
     
-    
-    # Print script banner
-    print("-----------------------------------------------")
-    print(Fore.CYAN+"    GPG AUTOMATOR")
-    print(Fore.CYAN+"           version:v0.1.0-beta1")
-    print(Fore.CYAN+"           Source: www.github.com/LunaOzma")
-    print("-----------------------------------------------")
-    
     # Prompt 1
     prompt1 = input("\n1. Import Keys\n2. Encrypt data\n> ")
     
@@ -51,13 +44,35 @@ if check_exist.returncode == 0:
     # Encrypt a message
     elif prompt1 == "2":
         
+        # Prompt user for recipients
+        while True:    
+            print("................................................")
+            recipients = input(Fore.CYAN+"Recipients names (r1, r2,..):\n"+Fore.RESET+"> ")
+            recipients = recipients.strip().split(",")
+            
+            valid = [recipient for recipient in recipients if recipient in keys_userid]
+            if len(recipients) == len(valid):
+                break
+            else:
+                print(Fore.RED+"> Error: Some recipients you entered don't exist!, try again!")        
+
+        # Prompt user for output directory
+        print("................................................")
+        outdir = input(Fore.CYAN+"Output directory:\n"+Fore.RESET+"1. Current directory\n2. Select directory\n> ")
+        if outdir == "1":
+            save_directory = os.getcwd()
+        elif outdir == "2":    
+            save_directory = saveDirectory()
+
+
         # Prompt 2
-        prompt2 = input("\n1. Generate data\n2. Select a file\n> ")
+        print("................................................")
+        prompt2 = input(Fore.CYAN+"Data to encrypt:\n"+Fore.RESET+"1. Generate data\n2. Select a file\n> ")
         
         # Enter text manually and encrypt it
         if prompt2 == "1":
             
-            print("> Enter/Paste your text. Ctrl-D or Ctrl-Z (Windows) to save it.")
+            print(Fore.YELLOW+"> Enter/Paste your text. Ctrl-D or Ctrl-Z (Windows) to save it.")
             text = []
             while True:
                 try:
@@ -68,39 +83,17 @@ if check_exist.returncode == 0:
               
             text = "\n".join(text)    
             # print(text)
-
-            # Prompt user for recipients
-            while True:    
-                recipients = input("\nRecipients names (r1, r2,..):\n> ")
-                recipients = recipients.strip().split(",")
-                
-                valid = [recipient for recipient in recipients if recipient in keys_userid]
-                if len(recipients) == len(valid):
-                    break
-                else:
-                    print(Fore.RED+"> Error: Some recipients you entered don't exist!, try again!")
-                    
-                    
-            
-            # Prompt user for output directory
-            outdir = input("\nOutput directory:\n1.Current directory\n2.Select directory\n")
-            if outdir == "1":
-                save_directory = os.getcwd()
-            elif outdir == "2":    
-                save_directory = saveDirectory()
-            
-            
+   
             # Encrypt text for each recipient          
             for recipient in recipients:
 
                 print("------------------------------------------------")
-
-                outputfile = str(Path((save_directory,input("Enter output filename:"))))
-                print ('\033[1A' +"output file: "+Fore.YELLOW+outputfile+ '\033[K')
-                print("recipients: "+Fore.YELLOW+recipient)
+                print(Fore.CYAN+"> Encrypting for recipient "+Fore.GREEN+recipient)
+                outputfile = str(Path(save_directory,input(Fore.CYAN+"> Enter output filename:"+Fore.YELLOW)))
+                print ('\033[1A' +Fore.CYAN+"> output file: "+Fore.YELLOW+outputfile+ '\033[K')
                 print(Fore.YELLOW+"\n> encrypting... ")
                 encrypted_ascii_data = gpg.encrypt(text , recipient,always_trust=True,output=outputfile,extra_args=['--yes'],armor=True)
-                print(Fore.GREEN+"> encrypted message successfully!")
+                print(Fore.GREEN+"> encrypted data successfully!")
                 
                 print("------------------------------------------------")
         
@@ -108,45 +101,26 @@ if check_exist.returncode == 0:
         elif prompt2 == "2":    
                        
             to_encrypt = filedialog()
-
-            # Prompt user for recipients
-            while True:    
-                recipients = input("\nRecipients names (r1, r2,..):\n> ")
-                recipients = recipients.strip().split(",")
-                
-                valid = [recipient for recipient in recipients if recipient in keys_userid]
-                if len(recipients) == len(valid):
-                    break
-                else:
-                    print(Fore.RED+"> Error: Some recipients you entered don't exist!, try again!")
-                       
             
-            outdir = input("\nOutput directory:\n1.Current directory\n2.Select directory\n")
-            if outdir == "1":
-                save_directory = os.getcwd()
-            elif outdir == "2":    
-                save_directory = saveDirectory()
+            print("................................................")
+            name_format = input(Fore.CYAN+"Output filename format:\n"+Fore.RESET+"1. filename_recipient.sig\n2. Enter filename manually\n> ")
             
-
-            name_format = input("\nOutput filename format:\n1.filename_recipient.sig\n2.Enter filename manually\n> ")
-            
-
             
             for inputfile in to_encrypt:                
                 for recipient in recipients:
 
                     inputfile = str(Path(inputfile))
                     print("------------------------------------------------")
-                    print("input file: "+Fore.YELLOW+inputfile)
+                    print(Fore.CYAN+"> Encrypting for recipient "+Fore.GREEN+recipient)
+                    print(Fore.CYAN+"> input file: "+Fore.YELLOW+inputfile)
 
                     if name_format == "1":
                         outputfile = str(Path(save_directory,os.path.basename(inputfile)+"_"+recipient+".sig")) 
-                        print("output file: "+Fore.YELLOW+outputfile)
+                        print(Fore.CYAN+"> output file: "+Fore.YELLOW+outputfile)
                     elif  name_format == "2":
-                        outputfile = str(Path(save_directory,input("Enter output filename:")))
-                        print ('\033[1A' +"output file: "+Fore.YELLOW+outputfile+ '\033[K')
+                        outputfile = str(Path(save_directory,input(Fore.CYAN+"> Enter output filename:"+Fore.YELLOW)))
+                        print ('\033[1A' +Fore.CYAN+"> output file: "+Fore.YELLOW+outputfile+ '\033[K')
 
-                    print("recipients: "+Fore.YELLOW+recipient)
                     print(Fore.YELLOW+"\n> encrypting... ")
 
                     encrypted_ascii_data = gpg.encrypt_file(inputfile , recipient,always_trust=True,output=outputfile,extra_args=['--yes'],armor=True)
